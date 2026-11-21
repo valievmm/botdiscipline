@@ -1,0 +1,4 @@
+# Проверялось на: pandas 3.0, numpy 2.5, matplotlib 3.11 (Python 3.12)
+pandas
+numpy
+matplotlib
