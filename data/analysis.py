@@ -1,8 +1,3 @@
-"""
-Анализ данных Telegram-бота «Трекер привычек» (numpy + pandas + matplotlib).
-Запуск:  python analysis.py
-Графики сохраняются в папку charts/.
-"""
 from pathlib import Path
 
 import matplotlib
@@ -91,7 +86,7 @@ run_id = new_run.cumsum()
 runs = d2[d2.completed == 1].groupby(run_id[d2.completed == 1]).size()
 print("Всего серий:", len(runs), "| медианная длина:", runs.median(), "| доля серий длиной 1–2 дня:", pct((runs <= 2).mean()))
 
-# --- retention ---
+# --- удержание ---
 retention = pd.DataFrame({w: (act.loc[users.weeks_obs > w, w].mean(), (users.weeks_obs > w).sum())
                           for w in range(13)}, index=["retention", "n_users"]).T
 print("\nRetention по неделям с регистрации (доля пользователей с >=1 выполнением в неделю):\n",
@@ -102,8 +97,8 @@ for c in cohort.index:
         m = (users.cohort == c) & (users.weeks_obs > w)
         if m.sum() >= 5:
             cohort.loc[c, w] = act.loc[m, w].mean()
-print("\nКогорты (месяц регистрации) x неделя:\n", (cohort * 100).round(0))
-print("Размеры когорт:\n", users.cohort.value_counts())
+print("\nГруппа (месяц регистрации) x неделя:\n", (cohort * 100).round(0))
+print("Размеры групп:\n", users.cohort.value_counts())
 
 # --- по категориям, дням, частоте ---
 by_cat = df.groupby("category").completed.agg(["mean", "size"]).sort_values("mean", ascending=False)
@@ -149,24 +144,24 @@ ax.set_title("Процент выполнения по категориям пр
 ax.set_xlabel("Категория"); ax.set_ylabel("Выполнено, %"); ax.set_ylim(0, 75); ax.legend()
 plt.xticks(rotation=20); fig.tight_layout(); fig.savefig(OUT / "1_completion_by_category.png", dpi=150); plt.close(fig)
 
-# 2) Динамика по неделям жизни + retention
+# 2) Динамика по неделям + удержание
 dw = df[df.weeks_obs > df.week].groupby("week").completed.mean()
 rt = retention[retention.n_users >= 15]
 dw = dw[dw.index.isin(rt.index)]
 fig, ax = plt.subplots()
-ax.plot(rt.index, rt.retention * 100, marker="o", color=GREEN, label="Retention (≥1 выполнение за неделю)")
+ax.plot(rt.index, rt.retention * 100, marker="o", color=GREEN, label="Удержание (≥1 выполнение за неделю)")
 ax.plot(dw.index, dw.values * 100, marker="s", color=BLUE, label="Доля выполненных отметок")
 ax.set_title("Динамика по неделям с момента регистрации")
-ax.set_xlabel("Неделя после регистрации (0 = первая)"); ax.set_ylabel("%"); ax.set_ylim(0, 105); ax.legend()
+ax.set_xlabel("Неделя после регистрации"); ax.set_ylabel("Доля активных пользователей, %"); ax.set_ylim(0, 105); ax.legend()
 fig.tight_layout(); fig.savefig(OUT / "2_weekly_dynamics_retention.png", dpi=150); plt.close(fig)
 
 # 3) Распределение длины серий
 fig, ax = plt.subplots()
-ax.hist(hab.max_streak, bins=range(0, int(hab.max_streak.max()) + 3, 2), color=BLUE, edgecolor="white", label="Привычки")
+ax.hist(hab.max_streak, bins=range(0, int(hab.max_streak.max()) + 3, 2), color=BLUE, edgecolor="white")
 ax.axvline(hab.max_streak.mean(), color=ORANGE, ls="--", label=f"Среднее: {hab.max_streak.mean():.1f}")
 ax.axvline(hab.max_streak.median(), color=RED, ls=":", label=f"Медиана: {hab.max_streak.median():.0f}")
-ax.set_title("Распределение максимальной серии (streak) по привычкам")
-ax.set_xlabel("Максимальная серия, дней подряд"); ax.set_ylabel("Число привычек"); ax.legend()
+ax.set_title("Распределение максимальной серии по привычкам")
+ax.set_xlabel("Максимальная серия, дней подряд"); ax.set_ylabel("Число привычек, шт"); ax.legend()
 fig.tight_layout(); fig.savefig(OUT / "3_streak_distribution.png", dpi=150); plt.close(fig)
 
 # 4) Дни недели
@@ -185,7 +180,7 @@ ax.set_ylim(0, 70); fig.tight_layout(); fig.savefig(OUT / "4_completion_by_weekd
 # 5) Напоминания и выполнение
 order = ["без напоминания", "утро (6–10)", "день (11–16)", "вечер (17–20)", "поздно (21+)"]
 x = np.arange(len(order)); w = 0.38
-fig, ax = plt.subplots(figsize=(9, 5))
+fig, ax = plt.subplots(figsize=(10, 5))
 ax.bar(x - w / 2, comp_slot.reindex(order) * 100, w, color=BLUE, label="Доля выполненных отметок")
 ax.bar(x[1:] + w / 2, reply_slot.reindex(order[1:]) * 100, w, color=ORANGE, label="Доля ответов на напоминание")
 for i, v in enumerate(comp_slot.reindex(order) * 100):
@@ -197,7 +192,7 @@ ax.set_title("Напоминания: время отправки, ответы 
 ax.set_xlabel("Время отправки напоминания"); ax.set_ylabel("%"); ax.set_ylim(0, 80); ax.legend()
 fig.tight_layout(); fig.savefig(OUT / "5_reminders_vs_completion.png", dpi=150); plt.close(fig)
 
-# 6) Когорты retention (heatmap)
+# 6) Удержание по группам
 fig, ax = plt.subplots(figsize=(8, 3.8))
 cmap = plt.get_cmap("Blues").copy(); cmap.set_bad("#eeeeee")
 im = ax.imshow(np.ma.masked_invalid(cohort.values * 100), cmap=cmap, vmin=0, vmax=100, aspect="auto")
@@ -208,24 +203,24 @@ for i in range(cohort.shape[0]):
             ax.text(j, i, f"{v * 100:.0f}", ha="center", va="center", color="white" if v > 0.6 else "black")
 ax.set_xticks(range(cohort.shape[1])); ax.set_yticks(range(cohort.shape[0])); ax.set_yticklabels(
     [f"{c} (n={users.cohort.value_counts()[c]})" for c in cohort.index])
-ax.set_title("Retention по когортам (месяц регистрации), %")
-ax.set_xlabel("Неделя после регистрации"); ax.set_ylabel("Когорта"); ax.grid(False)
+ax.set_title("Удержание по группам (месяц регистрации), %")
+ax.set_xlabel("Неделя после регистрации"); ax.set_ylabel("Группа"); ax.grid(False)
 fig.colorbar(im, ax=ax, label="% активных пользователей")
 fig.tight_layout(); fig.savefig(OUT / "6_cohort_retention.png", dpi=150); plt.close(fig)
 
-# 7) Нагрузка (число привычек) и серия накануне
+# 7) Нагрузка (число привычек) и серия 
 fig, axes = plt.subplots(1, 2, figsize=(11, 4.6))
 axes[0].bar(["1", "2", "3", "4+"], load["mean"] * 100, color=BLUE, label="Выполнение")
 axes[0].axhline(overall * 100, color=ORANGE, ls="--", label="Среднее по всем")
 for i, v in enumerate(load["mean"] * 100):
     axes[0].text(i, v + 0.8, f"{v:.0f}%", ha="center", fontsize=9)
-axes[0].set_title("Выполнение vs число активных привычек")
-axes[0].set_xlabel("Активных привычек у пользователя"); axes[0].set_ylabel("Выполнено, %"); axes[0].set_ylim(0, 75); axes[0].legend()
+axes[0].set_title("Вероятность выполнения vs число активных привычек")
+axes[0].set_xlabel("Активных привычек у пользователя"); axes[0].set_ylabel("Вероятность, %"); axes[0].set_ylim(0, 75); axes[0].legend()
 axes[1].bar(streak_eff.index.astype(str), streak_eff["mean"] * 100, color=GREEN, label="Вероятность выполнить сегодня")
 for i, v in enumerate(streak_eff["mean"] * 100):
     axes[1].text(i, v + 0.8, f"{v:.0f}%", ha="center", fontsize=9)
-axes[1].set_title("Выполнение vs серия накануне (активные недели)")
-axes[1].set_xlabel("Серия накануне, дней"); axes[1].set_ylabel("Выполнено, %"); axes[1].set_ylim(0, 100); axes[1].legend()
+axes[1].set_title("Вероятность выполнения vs серия  ")
+axes[1].set_xlabel("Серия , дней"); axes[1].set_ylabel("Вероятность, %"); axes[1].set_ylim(0, 100); axes[1].legend()
 fig.tight_layout(); fig.savefig(OUT / "7_load_and_streak_effect.png", dpi=150); plt.close(fig)
 
 print("\nГрафики сохранены в", OUT.resolve())
